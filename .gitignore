@@ -1,0 +1,74 @@
+## Compiled class files
+*.class
+
+## Package files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+## Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+## Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+## Android
+local.properties
+*.iml
+.idea/
+.DS_Store
+*.keystore
+**/captures/
+**/outputs/
+**/generated/
+**/intermediates/
+**/merged/
+**/transforms/
+**/proguard/
+
+## Node.js
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+## IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+## Database
+*.sql
+*.db
+
+## Environment
+.env
+.env.local
+.env.*.local
+
+## OS
+Thumbs.db
+.DS_Store
