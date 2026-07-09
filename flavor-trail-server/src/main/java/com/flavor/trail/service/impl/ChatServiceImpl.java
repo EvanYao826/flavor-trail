@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.flavor.trail.ai.AiAgentService;
 import com.flavor.trail.common.BusinessException;
 import com.flavor.trail.dto.request.CreateSessionRequest;
 import com.flavor.trail.dto.request.SendMessageRequest;
@@ -21,8 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,10 +35,14 @@ public class ChatServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSession>
 
     private final ChatMessageMapper chatMessageMapper;
     private final ObjectMapper objectMapper;
+    private final AiAgentService aiAgentService;
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public ChatServiceImpl(ChatMessageMapper chatMessageMapper, ObjectMapper objectMapper) {
+    public ChatServiceImpl(ChatMessageMapper chatMessageMapper, ObjectMapper objectMapper,
+                          AiAgentService aiAgentService) {
         this.chatMessageMapper = chatMessageMapper;
         this.objectMapper = objectMapper;
+        this.aiAgentService = aiAgentService;
     }
 
     @Override
@@ -105,21 +113,66 @@ public class ChatServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSession>
 
         SseEmitter emitter = new SseEmitter(300000L);
 
-        try {
-            emitter.send(SseEmitter.event()
-                    .name("message")
-                    .data("{\"delta\":\"正在思考中...\",\"done\":false}"));
+        executorService.execute(() -> {
+            try {
+                String aiResponse = aiAgentService.generateResponse(request.getContent(), request.getCity());
 
-            emitter.send(SseEmitter.event()
-                    .name("finish")
-                    .data("{\"sessionId\":" + sessionId + ",\"messageId\":" + userMessage.getId() + ",\"done\":true}"));
+                StringBuilder accumulated = new StringBuilder();
+                for (int i = 0; i < aiResponse.length(); i++) {
+                    accumulated.append(aiResponse.charAt(i));
+                    emitter.send(SseEmitter.event()
+                            .name("message")
+                            .data("{\"delta\":\"" + escapeJson(aiResponse.charAt(i)) + "\",\"done\":false}"));
+                    Thread.sleep(50);
+                }
 
-            emitter.complete();
-        } catch (IOException e) {
-            emitter.completeWithError(e);
-        }
+                ChatMessage aiMessage = ChatMessage.builder()
+                        .sessionId(sessionId)
+                        .userId(userId)
+                        .role("assistant")
+                        .content(aiResponse)
+                        .build();
+                chatMessageMapper.insert(aiMessage);
+
+                session.setUpdatedAt(LocalDateTime.now());
+                updateById(session);
+
+                emitter.send(SseEmitter.event()
+                        .name("finish")
+                        .data("{\"sessionId\":" + sessionId + ",\"messageId\":" + aiMessage.getId() + ",\"done\":true}"));
+
+                emitter.complete();
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                emitter.completeWithError(e);
+            } catch (Exception e) {
+                log.error("AI response error", e);
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("message")
+                            .data("{\"delta\":\"抱歉，我现在有点忙，请稍后再试。\",\"done\":false}"));
+                    emitter.send(SseEmitter.event()
+                            .name("finish")
+                            .data("{\"sessionId\":" + sessionId + ",\"done\":true}"));
+                    emitter.complete();
+                } catch (IOException ex) {
+                    emitter.completeWithError(ex);
+                }
+            }
+        });
 
         return emitter;
+    }
+
+    private String escapeJson(char c) {
+        if (c == '"') return "\\\"";
+        if (c == '\\') return "\\\\";
+        if (c == '\n') return "\\n";
+        if (c == '\r') return "\\r";
+        if (c == '\t') return "\\t";
+        return String.valueOf(c);
     }
 
     @Override

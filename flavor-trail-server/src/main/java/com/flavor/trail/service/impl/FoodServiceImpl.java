@@ -146,6 +146,24 @@ public class FoodServiceImpl extends ServiceImpl<FoodMapper, Food> implements Fo
         exploreService.updateProgress(userId, food.getProvinceId());
     }
 
+    @Override
+    public List<FoodVO> getFavorites(Long userId, int pageNum, int pageSize) {
+        LambdaQueryWrapper<UserFavorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserFavorite::getUserId, userId)
+                .orderByDesc(UserFavorite::getCreatedAt);
+
+        Page<UserFavorite> page = new Page<>(pageNum, pageSize);
+        IPage<UserFavorite> favPage = userFavoriteMapper.selectPage(page, wrapper);
+
+        return favPage.getRecords().stream()
+                .map(fav -> {
+                    Food food = getById(fav.getFoodId());
+                    return food != null ? convertToVO(food, userId) : null;
+                })
+                .filter(v -> v != null)
+                .collect(Collectors.toList());
+    }
+
     private FoodVO convertToVO(Food food, Long userId) {
         Province province = provinceMapper.selectById(food.getProvinceId());
 

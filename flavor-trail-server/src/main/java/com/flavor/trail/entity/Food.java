@@ -51,4 +51,7 @@ public class Food {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.UPDATE)
+    private LocalDateTime updatedAt;
 }

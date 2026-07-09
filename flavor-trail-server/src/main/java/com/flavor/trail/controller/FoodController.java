@@ -72,6 +72,6 @@ public class FoodController {
     public Result<List<FoodVO>> getFavorites(@AuthenticationPrincipal User user,
                                              @RequestParam(defaultValue = "1") int pageNum,
                                              @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(List.of());
+        return Result.success(foodService.getFavorites(user.getId(), pageNum, pageSize));
     }
 }

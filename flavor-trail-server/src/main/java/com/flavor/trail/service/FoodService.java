@@ -21,4 +21,6 @@ public interface FoodService extends IService<Food> {
     CollectResultVO toggleCollect(Long foodId, Long userId);
 
     void recordView(Long foodId, Long userId);
+
+    List<FoodVO> getFavorites(Long userId, int pageNum, int pageSize);
 }

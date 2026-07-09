@@ -31,4 +31,7 @@ public class ExploreProgress {
     private LocalDateTime firstExploredAt;
 
     private LocalDateTime lastExploredAt;
+
+    @TableField(fill = FieldFill.UPDATE)
+    private LocalDateTime updatedAt;
 }

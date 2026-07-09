@@ -25,4 +25,10 @@ public class Province {
 
     @Builder.Default
     private Integer sortOrder = 0;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.UPDATE)
+    private LocalDateTime updatedAt;
 }
